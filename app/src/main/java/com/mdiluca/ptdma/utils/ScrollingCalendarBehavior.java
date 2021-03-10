@@ -1,4 +1,4 @@
-package com.mdiluca.ptdma;
+package com.mdiluca.ptdma.utils;
 
 import android.content.Context;
 import android.util.AttributeSet;

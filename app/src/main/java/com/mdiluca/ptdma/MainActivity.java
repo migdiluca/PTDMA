@@ -7,7 +7,10 @@ import androidx.fragment.app.FragmentTransaction;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
+
+import com.mdiluca.ptdma.Fragments.AddToDoFragment;
+import com.mdiluca.ptdma.Fragments.ConversationFragment;
+import com.mdiluca.ptdma.Fragments.ListFragment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +25,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         fragmentList = new ArrayList<>(3);
-        fragmentList.add(ShoppingListFragment.newInstance("",""));
-        fragmentList.add(AddToDo.newInstance("asd", true));
         fragmentList.add(ConversationFragment.newInstance("I'm your assistant, if you need help just ask for it!", ""));
+        fragmentList.add(ListFragment.newInstance(new String[]{"Verduleria"},"Your shopping lists"));
+        fragmentList.add(ListFragment.newInstance(new String[]{"Pepino", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo"}
+        ,"Verduleria"));
+        fragmentList.add(ConversationFragment.newInstance("Are you sure you want to delete Pepino from the list?", ""));
+        fragmentList.add(ListFragment.newInstance(new String[]{"Fix window", "Pay 10 bucks to Lisa"},"Tasks"));
+        fragmentList.add(AddToDoFragment.newInstance(true));
+        fragmentList.add(AddToDoFragment.newInstance(false));
+
+        switchFragment(fragmentList.get(0));
     }
 
     public void onMicPress(View view) {

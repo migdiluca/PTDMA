@@ -13,7 +13,7 @@
         android:fitsSystemWindows="true"
         android:theme="@style/AppTheme.AppBarOverlay"
         app:expanded="false"
-        app:layout_behavior=".ScrollingCalendarBehavior">
+        app:layout_behavior=".utils.ScrollingCalendarBehavior">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsingToolbarLayout"
@@ -40,8 +40,8 @@
                     android:paddingLeft="10dp"
                     android:paddingRight="10dp"
                     app:compactCalendarBackgroundColor="?attr/colorPrimary"
-                    app:compactCalendarCurrentDayBackgroundColor="#AE8200"
-                    app:compactCalendarCurrentSelectedDayBackgroundColor="#04B8A7"
+                    app:compactCalendarCurrentDayBackgroundColor="#039BE5"
+                    app:compactCalendarCurrentSelectedDayBackgroundColor="@color/colorAccent"
                     app:compactCalendarTextColor="#fff"
                     app:compactCalendarTextSize="12sp" />
             </LinearLayout>
@@ -72,6 +72,7 @@
                         android:drawablePadding="10dp"
                         android:drawableTint="@android:color/white"
                         android:ellipsize="end"
+                        android:gravity="center_vertical"
                         android:maxLines="1"
                         android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"
                         android:textColor="@android:color/white" />
@@ -82,8 +83,10 @@
                         android:layout_height="wrap_content"
                         android:layout_alignTop="@id/date_picker_text_view"
                         android:layout_alignBottom="@id/date_picker_text_view"
+                        android:layout_marginLeft="10dp"
                         android:layout_toRightOf="@id/date_picker_text_view"
                         app:srcCompat="@drawable/ic_arrow_up"
+                        app:tint="#FFFFFF"
                         tools:ignore="ContentDescription,RtlHardcoded" />
                 </RelativeLayout>
             </androidx.appcompat.widget.Toolbar>

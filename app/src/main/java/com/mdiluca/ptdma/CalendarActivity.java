@@ -5,6 +5,7 @@ import android.os.Bundle;
 import com.github.sundeepk.compactcalendarview.CompactCalendarView;
 import com.google.android.material.appbar.AppBarLayout;
 import com.mdiluca.ptdma.Models.Event;
+import com.mdiluca.ptdma.utils.AppBarStateChangeListener;
 import com.mdiluca.ptdma.utils.CalendarItemAdapter;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -71,6 +72,7 @@ public class CalendarActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        selectedDate = new Date();
         appBarLayout = findViewById(R.id.app_bar_layout);
         compactCalendarView = findViewById(R.id.compactcalendar_view);
         final ImageView arrow = findViewById(R.id.date_picker_arrow);
@@ -94,8 +96,16 @@ public class CalendarActivity extends AppCompatActivity {
             }
         });
 
-        eventList.add(new Event("titulo", new Date()));
-        eventList.add(new Event("titulo2", new Date()));
+        Date somedate = new Date();
+        somedate.setHours(10);
+        somedate.setMinutes(0);
+
+
+        Date somedate2 = new Date();
+        somedate2.setHours(8);
+        somedate2.setMinutes(0);
+        eventList.add(new Event("Job meeting", somedate2));
+        eventList.add(new Event("Soccer practice", somedate));
         simpleList = findViewById(R.id.simpleListView);
         CalendarItemAdapter myAdapter = new CalendarItemAdapter(this,R.layout.calendar_item, eventList);
         simpleList.setAdapter(myAdapter);

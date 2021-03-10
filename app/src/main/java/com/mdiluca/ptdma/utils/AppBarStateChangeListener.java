@@ -1,4 +1,4 @@
-package com.mdiluca.ptdma;
+package com.mdiluca.ptdma.utils;
 
 import com.google.android.material.appbar.AppBarLayout;
 
