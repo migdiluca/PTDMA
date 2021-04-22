@@ -1,6 +1,5 @@
 package com.mdiluca.ptdma.Fragments;
 
-import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -15,7 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.mdiluca.ptdma.Interfaces.ApplyFunction;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
 import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.MainActivity;
@@ -38,8 +36,6 @@ public class ConversationFragment extends Fragment {
     private boolean awaitsResponse = false;
     private SimpleFunction startListening;
     private SimpleFunction stopListening;
-
-    private ApplyFunction applyFunction = this::applyF;
 
     private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
         @Override
@@ -75,15 +71,20 @@ public class ConversationFragment extends Fragment {
         @Override
         public void onEndOfSpeech() { }
         @Override
-        public void onError(int i) { }
+        public void onError(int i) {
+            stopListening.apply();
+        }
         @Override
         public void onResults(Bundle bundle) {
             if(bundle != null) {
                 stopListening.apply();
                 ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-
                 String resp = data.get(0);
-                applyF(resp);
+                boolean entered  = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
+                if(!entered) {
+                    awaitsResponse = true;
+                    setAssistantResponse(getString(R.string.no_understand));
+                }
             }
         }
 
@@ -117,7 +118,6 @@ public class ConversationFragment extends Fragment {
         fragmentSwitcher = mainActivity.fragmentSwitcher;
 
         mainActivity.setSpeechRecognizer(recognitionListener);
-        mainActivity.setApplyFunction(applyFunction);
 
         startListening = mainActivity::startListening;
         stopListening = mainActivity::stopListening;
@@ -126,13 +126,16 @@ public class ConversationFragment extends Fragment {
     }
 
     @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        setAssistantResponse(assistantText);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         View inf = inflater.inflate(R.layout.fragment_conversation, container, false);
         assistantTextView = inf.findViewById(R.id.assistantText);
-
-        setAssistantResponse(assistantText);
         return inf;
     }
 
@@ -141,19 +144,6 @@ public class ConversationFragment extends Fragment {
         super.onResume();
         MainActivity mainActivity = (MainActivity) getActivity();
         mainActivity.setSpeechRecognizer(recognitionListener);
-        mainActivity.setApplyFunction(applyFunction);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        System.out.println("REQUEST CODE!!");
-        System.out.println(requestCode);
-    }
-
-    private void applyF(String resp) {
-        ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
     }
 
     private void setAssistantResponse(String assistantResponse) {

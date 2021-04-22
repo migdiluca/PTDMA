@@ -14,7 +14,7 @@ import com.mdiluca.ptdma.utils.Utils;
 
 import static com.mdiluca.ptdma.Tools.PermissionManager.PERMISSION_ALL_CODE;
 
-public class PermissionsActivity extends AppCompatActivity {
+public class PermissionsActivity extends ToastOnBackActivity {
 
     private long lastBackPressedTime = -1;
 
@@ -41,18 +41,6 @@ public class PermissionsActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             }
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        long now = System.currentTimeMillis();
-        if(lastBackPressedTime == -1 || now - lastBackPressedTime > 5000) {
-            lastBackPressedTime = now;
-            Toast toast = Toast.makeText(this, getText(R.string.back_exit_warning), Toast.LENGTH_LONG);
-            toast.show();
-        } else {
-            super.onBackPressed();
         }
     }
 }

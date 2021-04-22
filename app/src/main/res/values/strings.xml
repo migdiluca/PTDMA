@@ -13,14 +13,6 @@
     <string name="fields_empty">You need to complete both fields first</string>
     <string name="calendar_error">There was an error loading the calendar, try again later</string>
 
-    <!-- General -->
-    <string name="delete_confirmation">Are you sure you want to delete %s?</string>
-    <string name="delete_feedback">%s was deleted.</string>
-    <string name="delete_all_feedback">All items were deleted.</string>
-    <string name="delete_canceled">Delete operation cancelled</string>
-    <string name="item_not_found">%s was not found, therefore it can\'t be deleted</string>
-    <string name="back_exit_warning">Press back again to exit the application</string>
-
     <!-- Permissions -->
     <string name="permissions_title">Permissions missing!</string>
     <string name="permissions_message_1">The application needs two permissions:</string>
@@ -33,7 +25,7 @@
     <string name="shopping_lists">Shopping lists</string>
     <string name="shopping_list_added">I\'ve added your shopping list \'%s\'</string>
     <string name="shopping_list_item_added">I\'ve added \'%s\' to the shopping list \'%s\'</string>
-    <string name="shopping_list_already_exists">I\'ve added your shopping list \'%s\'</string>
+    <string name="shopping_list_already_exists">The shopping list \'%s\' already exists</string>
     <string name="shopping_list_not_found">The shopping list \'%s\' doesn\'t exists</string>
     <string name="task_added">I\'ve added your task \'%s\'</string>
     <string name="event_added">I\'ve added your event \'%s\' at %s</string>
@@ -43,5 +35,41 @@
 
     <!-- Calendar -->
     <string name="empty_event_list">There are no events for the selected date.</string>
+    <string name="event_deleted">The event was deleted</string>
+    <string name="event_modified">The event was modified</string>
+
+    <!-- General -->
+    <string name="delete_confirmation">Are you sure you want to delete %s?</string>
+    <string name="delete_feedback">%s was deleted.</string>
+    <string name="delete_all_feedback">All items were deleted.</string>
+    <string name="delete_canceled">Delete operation cancelled</string>
+    <string name="item_not_found">%s was not found, therefore it can\'t be deleted</string>
+    <string name="back_exit_warning">Press back again to exit the application</string>
+    <string name="help_message">List of commands:\n\n
+        - create/add: \n
+        \t\t\t - task\n
+        \t\t\t - shopping list\n
+        \t\t\t - event: The assistant expects the date on the following formats:\n
+        \t\t\t\t\t\t - 1st of April (of) 2020 at 16:30/4:30pm\n
+        \t\t\t\t\t\t - April 1st 2020 at 16:30/4:30pm\n
+        \t\t\t\t\t\t - in 5 days/hours/minutes/seconds\n\n
+        \t\t\t You can say cancel anytime while adding a new item.
+        \n\n
+        - show/open my:\n
+        \t\t\t - events\n
+        \t\t\t - tasks\n
+        \t\t\t - shopping lists\n\n
+        - undo last action: This command undo last performed action on tasks or shopping lists.
+        Is not available for events yet.\n\n
+
+        While on a list or while in the calendar you can use this commands:\n
+        \t\t\t - add/create name\n
+        \t\t\t - rename/edit name to new name\n
+        \t\t\t - delete/remove/erase name\n
+        \t\t\t - enter/open name (only in shopping lists)\n
+        \t\t\t - delete all (not available with events)\n
+
+    </string>
+
 
 </resources>

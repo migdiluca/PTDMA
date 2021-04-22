@@ -2,13 +2,10 @@ package com.mdiluca.ptdma;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.accounts.AccountManager;
-import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -24,7 +21,6 @@ import android.widget.EditText;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import com.mdiluca.ptdma.Fragments.ConversationFragment;
-import com.mdiluca.ptdma.Interfaces.ApplyFunction;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
 import com.mdiluca.ptdma.Models.Enum.ListTypes;
 import com.mdiluca.ptdma.Tools.PermissionManager;
@@ -39,10 +35,8 @@ import java.util.Map;
 
 import static com.mdiluca.ptdma.Tools.PermissionManager.PERMISSION_ALL_CODE;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends ToastOnBackActivity {
 
-    private UiModeManager uiModeManager;
-    private ApplyFunction applyFunction;
     private SpeechRecognizer speechRecognizer;
     private Intent speechRecognizerIntent;
     public final FragmentSwitcher fragmentSwitcher = this::switchFragment;
@@ -57,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
     private Map<String, ArrayList<String>> shoppingLists;
 
     private String account;
-    private EditText userInput;
 
     private static final int REQUEST_ACCOUNT_CODE = 23;
 
@@ -65,8 +58,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
+        TextToSpeechInstance.createInstance(this);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         speechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -74,19 +66,15 @@ public class MainActivity extends AppCompatActivity {
 
         micButton = findViewById(R.id.micButton);
 
-
-        TextToSpeechInstance.createInstance(this);
-        userInput = findViewById(R.id.userInput);
         readData();
         micButton.setOnClickListener((view -> {
-//            if (!listening) {
-//                userStopped = false;
-//                startListening();
-//            } else {
-//                userStopped = true;
-//                stopListening();
-//            }
-            applyFunction.apply(userInput.getText().toString());
+            if (!listening) {
+                userStopped = false;
+                startListening();
+            } else {
+                userStopped = true;
+                stopListening();
+            }
         }));
 
         if (!PermissionManager.checkPermissions(this))
@@ -96,13 +84,14 @@ public class MainActivity extends AppCompatActivity {
         switchFragment(ConversationFragment.newInstance("I'm your assistant, if you need help just ask for it!"));
     }
 
+
+
     public void stopListeningUser() {
         stopListening();
         userStopped = true;
     }
 
     public void startListening() {
-        System.out.println("start");
         TextToSpeechInstance.stop();
         if (!userStopped) {
             micButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.colorPrimary)));
@@ -113,7 +102,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopListening() {
-        System.out.println("stop");
         speechRecognizer.stopListening();
         micButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.colorAccent)));
         micButton.setImageTintList(ColorStateList.valueOf(Color.parseColor("#cfcfcf")));
@@ -136,20 +124,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setSpeechRecognizer(RecognitionListener recognitionListener) {
-        speechRecognizer.setRecognitionListener(recognitionListener);
+        if(speechRecognizer != null)
+            speechRecognizer.setRecognitionListener(recognitionListener);
     }
-
-    // This function is called when user accept or decline the permission.
-// Request Code is used to check which permission called this function.
-// This request code is provided when user is prompt for permission.
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        System.out.println("RESULT CODE");
-        System.out.println(resultCode);
         if (resultCode == 0) {
             Intent intent = AccountManager.newChooseAccountIntent(null, null, new String[]{"com.google"},
                     null, null, null, null);
@@ -230,14 +212,6 @@ public class MainActivity extends AppCompatActivity {
         String shoppingListsJson = gson.toJson(shoppingLists);
         editor.putString("shoppingLists", shoppingListsJson);
         editor.apply();
-    }
-
-    public ApplyFunction getApplyFunction() {
-        return applyFunction;
-    }
-
-    public void setApplyFunction(ApplyFunction applyFunction) {
-        this.applyFunction = applyFunction;
     }
 
     @Override

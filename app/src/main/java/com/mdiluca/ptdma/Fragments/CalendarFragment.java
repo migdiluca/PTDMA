@@ -19,19 +19,22 @@ import android.widget.TextView;
 
 import com.github.sundeepk.compactcalendarview.CompactCalendarView;
 import com.google.android.material.appbar.AppBarLayout;
-import com.mdiluca.ptdma.Interfaces.ApplyFunction;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
+import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.Models.Event;
 import com.mdiluca.ptdma.R;
+import com.mdiluca.ptdma.Tools.TextToSpeechInstance;
 import com.mdiluca.ptdma.utils.AppBarStateChangeListener;
 import com.mdiluca.ptdma.utils.CalendarItemAdapter;
 import com.mdiluca.ptdma.Tools.CalendarManager;
 import com.mdiluca.ptdma.Tools.ConversationVoiceRecognizer;
+import com.mdiluca.ptdma.utils.Utils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -47,57 +50,49 @@ public class CalendarFragment extends Fragment {
     private TextView datePickerTextView;
     private TextView noEventsWarning;
     private FragmentSwitcher fragmentSwitcher;
+    private CalendarItemAdapter myAdapter;
+    private SimpleFunction stopListening;
 
     private RecognitionListener recognitionListener = new RecognitionListener() {
         @Override
-        public void onReadyForSpeech(Bundle bundle) { }
-
-        @Override
-        public void onBeginningOfSpeech() { }
-
-        @Override
-        public void onRmsChanged(float v) { }
-
-        @Override
-        public void onBufferReceived(byte[] bytes) { }
-
-        @Override
-        public void onEndOfSpeech() { }
-
-        @Override
-        public void onError(int i) { }
-
-        @Override
-        public void onResults(Bundle bundle) {
-            String resp = "";
-            if (bundle != null) {
-                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                System.out.println(data.get(0));
-                resp = data.get(0);
-            }
-
-            applyFunction.apply(resp);
+        public void onReadyForSpeech(Bundle bundle) {
         }
 
         @Override
-        public void onPartialResults(Bundle bundle) { }
+        public void onBeginningOfSpeech() {
+        }
 
         @Override
-        public void onEvent(int i, Bundle bundle) { }
-    };
+        public void onRmsChanged(float v) {
+        }
 
-    private ApplyFunction applyFunction = (String resp) -> {
-        String[] twoWords = resp.split(" ", 2);
-        List<String> words = Arrays.asList(resp.split("\\s+"));
-        switch (twoWords[0]) {
-            case "delete":
-                long eventId = findEventIdToDelete(twoWords[1]);
-                if(eventId != -1)
-                    CalendarManager.deleteEvent(getActivity(), eventId);
-                break;
-            default:
-                ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
-                break;
+        @Override
+        public void onBufferReceived(byte[] bytes) {
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+        }
+
+        @Override
+        public void onError(int i) {
+        }
+
+        @Override
+        public void onResults(Bundle bundle) {
+            if (bundle != null) {
+                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String resp = data.get(0);
+                processVoice(resp);
+            }
+        }
+
+        @Override
+        public void onPartialResults(Bundle bundle) {
+        }
+
+        @Override
+        public void onEvent(int i, Bundle bundle) {
         }
     };
 
@@ -110,6 +105,7 @@ public class CalendarFragment extends Fragment {
             datePickerTextView.setText(dateFormat.format(dateClicked));
             onDateChange(dateClicked);
         }
+
         @Override
         public void onMonthScroll(Date firstDayOfNewMonth) {
             datePickerTextView.setText(dateFormat.format(firstDayOfNewMonth));
@@ -121,12 +117,12 @@ public class CalendarFragment extends Fragment {
         @Override
         public void onStateChanged(AppBarLayout appBarLayout, State state) {
             final ImageView arrow = getView().findViewById(R.id.date_picker_arrow);
-            if (state.name().compareTo("COLLAPSED")==0){
+            if (state.name().compareTo("COLLAPSED") == 0) {
                 ViewCompat.animate(arrow).rotation(180).start();
-                isExpanded=false;
-            }else if(state.name().compareTo("EXPANDED")==0){
+                isExpanded = false;
+            } else if (state.name().compareTo("EXPANDED") == 0) {
                 ViewCompat.animate(arrow).rotation(0).start();
-                isExpanded=true;
+                isExpanded = true;
             }
         }
     };
@@ -147,7 +143,8 @@ public class CalendarFragment extends Fragment {
         fragmentSwitcher = mainActivity.fragmentSwitcher;
 
         mainActivity.setSpeechRecognizer(recognitionListener);
-        mainActivity.setApplyFunction(applyFunction);
+
+        stopListening = mainActivity::stopListening;
     }
 
     @Override
@@ -157,10 +154,11 @@ public class CalendarFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_calendar, container, false);
         Toolbar toolbar = view.findViewById(R.id.toolbar);
 
-        selectedDate = new Date();
-        selectedDate.setHours(0);
-        selectedDate.setMinutes(0);
-        selectedDate.setSeconds(0);
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        selectedDate = today.getTime();
         appBarLayout = view.findViewById(R.id.app_bar_layout);
         compactCalendarView = view.findViewById(R.id.compactcalendar_view);
         final ImageView arrow = view.findViewById(R.id.date_picker_arrow);
@@ -177,6 +175,8 @@ public class CalendarFragment extends Fragment {
 
         compactCalendarView.setListener(compactCalendarViewListener);
         appBarLayout.addOnOffsetChangedListener(appBarStateChangeListener);
+
+        onDateChange(selectedDate);
 
         RelativeLayout datePickerButton = view.findViewById(R.id.date_picker_button);
         datePickerButton.setOnClickListener(new View.OnClickListener() {
@@ -202,7 +202,7 @@ public class CalendarFragment extends Fragment {
     private void onDateChange(Date date) {
         selectedDate = date;
         eventList = CalendarManager.getEvents(selectedDate, getActivity());
-        if(!eventList.isEmpty()) {
+        if (!eventList.isEmpty()) {
             noEventsWarning.setVisibility(View.GONE);
         } else {
             noEventsWarning.setVisibility(View.VISIBLE);
@@ -212,21 +212,64 @@ public class CalendarFragment extends Fragment {
     }
 
     private void updateList() {
-        CalendarItemAdapter myAdapter = new CalendarItemAdapter(getContext(),R.layout.calendar_item, eventList);
+        myAdapter = new CalendarItemAdapter(getContext(), R.layout.calendar_item, eventList);
         simpleList.setAdapter(myAdapter);
     }
 
-    private long findEventIdToDelete(String name) {
-        for(int i = 0; i < eventList.size(); i++) {
+    private long deleteEvent(String name) {
+        for (int i = 0; i < eventList.size(); i++) {
             Event e = eventList.get(i);
-            if(e.getTitle().equals(name)) {
+            if (e.getTitle().equals(name)) {
+                CalendarManager.deleteEvent(getActivity(), e.getId());
                 eventList.remove(i);
                 updateList();
-                if(eventList.isEmpty())
+                if (eventList.isEmpty())
                     noEventsWarning.setVisibility(View.VISIBLE);
+                TextToSpeechInstance.speak(getString(R.string.event_deleted));
                 return e.getId();
             }
         }
         return -1;
     }
+
+    private void editEvent(String oldName, String newName) {
+
+        for (int i = 0; i < eventList.size(); i++) {
+            Event event = eventList.get(i);
+            if (event.getTitle().equals(oldName)) {
+                CalendarManager.editEvent(getActivity(), event.getId(), newName);
+                event.setTitle(newName);
+                updateList();
+                TextToSpeechInstance.speak(getString(R.string.event_modified));
+                break;
+            }
+        }
+    }
+
+    private void processVoice(String resp) {
+        String[] twoWords = resp.split(" ", 2);
+        List<String> words = Arrays.asList(resp.split("\\s+"));
+        switch (twoWords[0]) {
+            case "delete":
+            case "remove":
+            case "erase":
+                if(twoWords.length > 1)
+                    deleteEvent(twoWords[1]);
+                break;
+            case "edit":
+            case "rename":
+                int i = words.indexOf("to");
+                if (i > 0 && words.size() >= 4) {
+                    String eventName = Utils.getStringFromList(words.subList(1, i));
+                    String newEventName = Utils.getStringFromList(words.subList(i + 1, words.size()));
+                    if (eventName.length() > 0 && newEventName.length() > 0) {
+                        editEvent(eventName, newEventName);
+                    }
+                }
+                break;
+            default:
+                ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
+                break;
+        }
+    };
 }

@@ -5,8 +5,10 @@ import android.os.Bundle;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 
+import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.UtteranceProgressListener;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,8 +16,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.mdiluca.ptdma.Interfaces.ApplyFunction;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
+import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.R;
 import com.mdiluca.ptdma.Tools.ConversationVoiceRecognizer;
@@ -35,7 +37,7 @@ public class ListFragment extends Fragment {
     private static final String shoppingListsBool = "shoppingListsBool";
     private boolean tasks;
     private boolean shoppingLists;
-
+    private boolean awaitsResponse = false;
     private boolean deleting = false;
     private String toDeleteItem;
     private ArrayList<String> list;
@@ -44,106 +46,74 @@ public class ListFragment extends Fragment {
     private TextView assistantText;
     private TextView emptyWarning;
     private CardView assistantCardView;
+    private SimpleFunction startListening;
+    private SimpleFunction stopListening;
 
     private FragmentSwitcher fragmentSwitcher;
 
-    private RecognitionListener recognitionListener = new RecognitionListener() {
+    private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
         @Override
-        public void onReadyForSpeech(Bundle bundle) { }
-        @Override
-        public void onBeginningOfSpeech() { }
-        @Override
-        public void onRmsChanged(float v) { }
-        @Override
-        public void onBufferReceived(byte[] bytes) { }
-        @Override
-        public void onEndOfSpeech() { }
-        @Override
-        public void onError(int i) { }
-
-        @Override
-        public void onResults(Bundle bundle) {
-            ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-            System.out.println(data.get(0));
-            String resp = data.get(0);
-            switch (resp) {
-                case "hello":
-                    fragmentSwitcher.switcher(ConversationFragment.newInstance("hola"));
+        public void onDone(String utteranceId) {
+            if (awaitsResponse) {
+                Handler mainHandler = new Handler(getContext().getMainLooper());
+                Runnable myRunnable = () -> startListening.apply();
+                mainHandler.post(myRunnable);
+                awaitsResponse = false;
             }
         }
 
         @Override
-        public void onPartialResults(Bundle bundle) {}
+        public void onError(String utteranceId) {
+
+        }
+
         @Override
-        public void onEvent(int i, Bundle bundle) {}
+        public void onStart(String utteranceId) {
+
+        }
     };
 
-    private ApplyFunction applyFunction = (String resp) -> {
-        String[] twoWords = resp.split(" ", 2);
-        List<String> words = Arrays.asList(resp.split("\\s+"));
-        boolean commandUsed = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
-        if(!commandUsed) {
-            if (deleting) {
-                switch (resp) {
-                    case "okay":
-                    case "ok":
-                    case "yes":
-                        deleteAllItems();
-                        deleting = false;
-                        break;
-                    case "cancel":
-                    case "no":
-                        setAssistantResponse(getString(R.string.delete_canceled));
-                        deleting = false;
-                        break;
-                }
-            } else {
-                switch (twoWords[0]) {
-                    case "delete":
-                    case "remove":
-                    case "erase":
-                        toDeleteItem = twoWords[1];
+    private RecognitionListener recognitionListener = new RecognitionListener() {
+        @Override
+        public void onReadyForSpeech(Bundle bundle) {
+        }
 
-                        if (list.contains(toDeleteItem)) {
-                            deleteItem(toDeleteItem);
-                        } else if (words.size() <= 3 && words.get(1).equals("all")) {
-                            deleting = true;
-                            setAssistantResponse(getString(R.string.delete_confirmation, "all items"));
-                        } else {
-                            setAssistantResponse(getString(R.string.item_not_found, toDeleteItem));
-                        }
-                        assistantCardView.setVisibility(View.VISIBLE);
-                        break;
-                    case "enter":
-                    case "open":
-                        if (shoppingLists && list.contains(twoWords[1])) {
-                            fragmentSwitcher.switcher(ListFragment.newInstance(twoWords[1]));
-                        }
-                        break;
-                    case "create":
-                    case "add":
-                        if (shoppingLists) {
-                            int i = words.indexOf("to");
-                            if (i > 0) {
-                                String itemName = Utils.getStringFromList(words.subList(1, i));
-                                String shoppingListName = Utils.getStringFromList(words.subList(i + 1, words.size()));
-                                if (itemName.length() > 0 && shoppingListName.length() > 0) {
-                                    if (!list.contains(shoppingListName)) {
-                                        setAssistantResponse(getString(R.string.shopping_list_not_found, shoppingListName));
-                                    } else {
-                                        addShoppingItem(shoppingListName, itemName);
-                                    }
-                                }
-                            }
-                        } else if (twoWords[1].length() > 0) {
-                            addItem(twoWords[1]);
-                        }
-                        break;
-                    default:
-                        commandUsed = false;
-                        break;
-                }
+        @Override
+        public void onBeginningOfSpeech() {
+        }
+
+        @Override
+        public void onRmsChanged(float v) {
+        }
+
+        @Override
+        public void onBufferReceived(byte[] bytes) {
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+        }
+
+        @Override
+        public void onError(int i) {
+            stopListening.apply();
+        }
+
+        @Override
+        public void onResults(Bundle bundle) {
+            if (bundle != null) {
+                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String resp = data.get(0);
+                processVoice(resp);
             }
+        }
+
+        @Override
+        public void onPartialResults(Bundle bundle) {
+        }
+
+        @Override
+        public void onEvent(int i, Bundle bundle) {
         }
     };
 
@@ -189,17 +159,19 @@ public class ListFragment extends Fragment {
             list = mainActivity.getShoppingLists().get(title);
         }
         mainActivity.setSpeechRecognizer(recognitionListener);
-        mainActivity.setApplyFunction(applyFunction);
+
+        startListening = mainActivity::startListening;
+        stopListening = mainActivity::stopListening;
+
+        TextToSpeechInstance.setOnUtteranceProgressListener(utteranceProgressListener);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view;
-        view = inflater.inflate(R.layout.fragment_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_list, container, false);
 
         emptyWarning = view.findViewById(R.id.emptyList);
-        // Inflate the layout for this fragment
         ListView shoppingList = view.findViewById(R.id.shoppingList);
         adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, list);
         shoppingList.setAdapter(adapter);
@@ -243,7 +215,8 @@ public class ListFragment extends Fragment {
                 setAssistantResponse(getString(R.string.shopping_list_already_exists));
             }
         } else if (tasks) {
-            adapter.add(text);
+            list.add(text);
+            adapter.notifyDataSetChanged();
             ma.setTaskList(list);
         } else {
             Map<String, ArrayList<String>> sl = ma.getShoppingLists();
@@ -260,7 +233,7 @@ public class ListFragment extends Fragment {
     private void deleteAllItems() {
         MainActivity ma = (MainActivity) getActivity();
         list = new ArrayList<>();
-        adapter.clear();
+        adapter.notifyDataSetChanged();
         if (shoppingLists) {
             ma.setShoppingLists(new HashMap<>());
         } else if (tasks) {
@@ -304,7 +277,128 @@ public class ListFragment extends Fragment {
     }
 
     private void setAssistantResponse(String assistantResponse) {
+        assistantCardView.setVisibility(View.VISIBLE);
         assistantText.setText(assistantResponse);
         TextToSpeechInstance.speak(assistantResponse);
+    }
+
+    private void renameItem(String oldName, String newName) {
+        MainActivity ma = (MainActivity) getActivity();
+
+        int index = list.indexOf(oldName);
+        list.remove(index);
+        list.add(index, newName);
+        adapter.notifyDataSetChanged();
+        if (shoppingLists) {
+            Map<String, ArrayList<String>> sl = ma.getShoppingLists();
+            ArrayList<String> list = sl.get(oldName);
+            sl.remove(oldName);
+            sl.put(newName, list);
+            ma.setShoppingLists(sl);
+        } else if (tasks) {
+            ma.setTaskList(list);
+        } else {
+            Map<String, ArrayList<String>> sl = ma.getShoppingLists();
+            ArrayList<String> myList = sl.get(title);
+
+            if (myList != null) {
+                myList.remove(oldName);
+                myList.add(newName);
+                sl.put(title, myList);
+            }
+            ma.setShoppingLists(sl);
+        }
+    }
+
+    private void processVoice(String resp) {
+        stopListening.apply();
+        assistantCardView.setVisibility(View.GONE);
+        String[] twoWords = resp.split(" ", 2);
+        List<String> words = Arrays.asList(resp.split("\\s+"));
+        boolean commandUsed = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
+        if (!commandUsed) {
+            if (deleting) {
+                switch (resp) {
+                    case "okay":
+                    case "ok":
+                    case "yes":
+                        deleteAllItems();
+                        deleting = false;
+                        break;
+                    case "cancel":
+                    case "no":
+                        setAssistantResponse(getString(R.string.delete_canceled));
+                        deleting = false;
+                        break;
+                }
+            } else {
+                switch (twoWords[0]) {
+                    case "delete":
+                    case "remove":
+                    case "erase":
+                        toDeleteItem = twoWords[1];
+
+                        if (list.contains(toDeleteItem)) {
+                            deleteItem(toDeleteItem);
+                        } else if (words.size() <= 3 && words.get(1).equals("all")) {
+                            deleting = true;
+                            awaitsResponse = true;
+                            setAssistantResponse(getString(R.string.delete_confirmation, "all items"));
+                        } else {
+                            setAssistantResponse(getString(R.string.item_not_found, toDeleteItem));
+                        }
+                        assistantCardView.setVisibility(View.VISIBLE);
+                        break;
+                    case "enter":
+                    case "open":
+                        if (shoppingLists && list.contains(twoWords[1])) {
+                            fragmentSwitcher.switcher(ListFragment.newInstance(twoWords[1]));
+                        }
+                        break;
+                    case "create":
+                    case "add":
+                        int i = words.indexOf("to");
+                        if (shoppingLists && i > 0 && words.size() >= 4) {
+                            String itemName = Utils.getStringFromList(words.subList(1, i));
+                            String shoppingListName = Utils.getStringFromList(words.subList(i + 1, words.size()));
+                            if (itemName.length() > 0 && shoppingListName.length() > 0) {
+                                if (!list.contains(shoppingListName)) {
+                                    setAssistantResponse(getString(R.string.shopping_list_not_found, shoppingListName));
+                                } else {
+                                    addShoppingItem(shoppingListName, itemName);
+                                }
+                            }
+                        } else if (twoWords.length > 1 && twoWords[1].length() > 0) {
+                            addItem(twoWords[1]);
+                        }
+                        break;
+                    case "rename":
+                    case "edit":
+                        i = words.indexOf("to");
+                        if (i > 0 && words.size() >= 4) {
+                            String itemName = Utils.getStringFromList(words.subList(1, i));
+                            String newItemName = Utils.getStringFromList(words.subList(i + 1, words.size()));
+                            if (itemName.length() > 0 && newItemName.length() > 0) {
+                                if (shoppingLists) {
+                                    if (list.contains(newItemName))
+                                        setAssistantResponse(getString(R.string.shopping_list_already_exists, newItemName));
+                                    else
+                                        renameItem(itemName, newItemName);
+                                } else {
+                                    renameItem(itemName, newItemName);
+                                }
+                            }
+                        }
+                        break;
+                    default:
+                        commandUsed = false;
+                        break;
+                }
+            }
+        }
+        if(!commandUsed) {
+            awaitsResponse = true;
+            setAssistantResponse(getString(R.string.no_understand));
+        }
     }
 }

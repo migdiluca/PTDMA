@@ -120,6 +120,14 @@ public class CalendarManager {
         Uri deleteUri = null;
         deleteUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId);
         int rows = cr.delete(deleteUri, null, null);
-        System.out.println("Rows deleted: " + rows);
+    }
+
+    public static void editEvent(Activity activity, long eventId, String newName) {
+        ContentResolver cr = activity.getContentResolver();
+        ContentValues values = new ContentValues();
+        Uri updateUri = null;
+        values.put(CalendarContract.Events.TITLE, newName);
+        updateUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId);
+        int rows = cr.update(updateUri, values, null, null);
     }
 }

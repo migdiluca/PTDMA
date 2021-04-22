@@ -25,7 +25,6 @@ import com.mdiluca.ptdma.Fragments.Pickers.DatePickerFragment;
 import com.mdiluca.ptdma.Fragments.Pickers.TimePickerFragment;
 import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.Models.Enum.ConversationState;
-import com.mdiluca.ptdma.Interfaces.ApplyFunction;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
 import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.Models.Event;
@@ -103,10 +102,13 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         public void onBufferReceived(byte[] bytes) { }
 
         @Override
-        public void onEndOfSpeech() { }
+        public void onEndOfSpeech() {
+        }
 
         @Override
-        public void onError(int i) { }
+        public void onError(int i) {
+            stopListening.apply();
+        }
 
         @Override
         public void onResults(Bundle bundle) {
@@ -116,7 +118,7 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
                 resp = data.get(0);
             }
 
-            applyFunction.apply(resp);
+            processVoice(resp);
         }
 
         @Override
@@ -124,37 +126,6 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
 
         @Override
         public void onEvent(int i, Bundle bundle) { }
-    };
-
-    private ApplyFunction applyFunction = (String resp) -> {
-        stopListening.apply();
-        switch (conversationState) {
-            case ASK_TITLE:
-                if (resp.length() > 0) {
-                    titleText.setText(resp);
-                    if (withDate) {
-                        conversationState = ConversationState.ASK_DATE;
-                        setAssistantResponse(getString(R.string.ask_date));
-                    } else {
-                        if (shoppingList)
-                            addShoppingList();
-                        else
-                            addTask();
-                    }
-                } else {
-                    setAssistantResponse(getString(R.string.empty_title));
-                }
-                break;
-            case ASK_DATE:
-                Calendar date = DateParser.parseDate(resp);
-                if (date == null) {
-                    setAssistantResponse(getString(R.string.no_understand));
-                } else {
-                    dateText.setText(resp);
-                    addEvent(date);
-                }
-                break;
-        }
     };
 
     public AddToDoFragment() {
@@ -189,7 +160,7 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         fragmentSwitcher = mainActivity.fragmentSwitcher;
 
         mainActivity.setSpeechRecognizer(recognitionListener);
-        mainActivity.setApplyFunction(applyFunction);
+
         startListening = mainActivity::startListening;
         stopListening = mainActivity::stopListening;
         stopListeningUser = mainActivity::stopListeningUser;
@@ -327,5 +298,40 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         selectedDate.set(Calendar.MINUTE, minutes);
 
         dateText.setText(dateFormat.format(selectedDate.getTime()));
+    }
+
+    private void processVoice(String resp) {
+        stopListening.apply();
+        if(resp.equals("cancel")) {
+            fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.add_canceled)));
+        } else {
+            switch (conversationState) {
+                case ASK_TITLE:
+                    if (resp.length() > 0) {
+                        titleText.setText(resp);
+                        if (withDate) {
+                            conversationState = ConversationState.ASK_DATE;
+                            setAssistantResponse(getString(R.string.ask_date));
+                        } else {
+                            if (shoppingList)
+                                addShoppingList();
+                            else
+                                addTask();
+                        }
+                    } else {
+                        setAssistantResponse(getString(R.string.empty_title));
+                    }
+                    break;
+                case ASK_DATE:
+                    Calendar date = DateParser.parseDate(resp);
+                    if (date == null) {
+                        setAssistantResponse(getString(R.string.no_understand));
+                    } else {
+                        dateText.setText(resp);
+                        addEvent(date);
+                    }
+                    break;
+            }
+        }
     }
 }
