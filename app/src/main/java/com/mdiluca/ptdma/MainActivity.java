@@ -1,63 +1,281 @@
 package com.mdiluca.ptdma;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.accounts.AccountManager;
+import android.app.UiModeManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.View;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.widget.EditText;
 
-import com.mdiluca.ptdma.Fragments.AddToDoFragment;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.gson.Gson;
 import com.mdiluca.ptdma.Fragments.ConversationFragment;
-import com.mdiluca.ptdma.Fragments.ListFragment;
+import com.mdiluca.ptdma.Interfaces.ApplyFunction;
+import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
+import com.mdiluca.ptdma.Models.Enum.ListTypes;
+import com.mdiluca.ptdma.Tools.PermissionManager;
+import com.mdiluca.ptdma.Tools.TextToSpeechInstance;
+import com.mdiluca.ptdma.utils.Utils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import static com.mdiluca.ptdma.Tools.PermissionManager.PERMISSION_ALL_CODE;
 
 public class MainActivity extends AppCompatActivity {
 
-    private int index = 0;
-    private List<Fragment> fragmentList;
+    private UiModeManager uiModeManager;
+    private ApplyFunction applyFunction;
+    private SpeechRecognizer speechRecognizer;
+    private Intent speechRecognizerIntent;
+    public final FragmentSwitcher fragmentSwitcher = this::switchFragment;
+    private boolean listening = false;
+    private FloatingActionButton micButton;
+    private boolean userStopped = false;
+
+    private ListTypes lastModifiedType;
+    private String lastModifiedJson;
+
+    private List<String> taskList;
+    private Map<String, ArrayList<String>> shoppingLists;
+
+    private String account;
+    private EditText userInput;
+
+    private static final int REQUEST_ACCOUNT_CODE = 23;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        fragmentList = new ArrayList<>(3);
-        fragmentList.add(ConversationFragment.newInstance("I'm your assistant, if you need help just ask for it!", ""));
-        fragmentList.add(ListFragment.newInstance(new String[]{"Verduleria"},"Your shopping lists"));
-        fragmentList.add(ListFragment.newInstance(new String[]{"Pepino", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo", "Pimienta", "Choclo", "Huevo"}
-        ,"Verduleria"));
-        fragmentList.add(ConversationFragment.newInstance("Are you sure you want to delete Pepino from the list?", ""));
-        fragmentList.add(ListFragment.newInstance(new String[]{"Fix window", "Pay 10 bucks to Lisa"},"Tasks"));
-        fragmentList.add(AddToDoFragment.newInstance(true));
-        fragmentList.add(AddToDoFragment.newInstance(false));
 
-        switchFragment(fragmentList.get(0));
+        uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.ENGLISH);
+
+        micButton = findViewById(R.id.micButton);
+
+
+        TextToSpeechInstance.createInstance(this);
+        userInput = findViewById(R.id.userInput);
+        readData();
+        micButton.setOnClickListener((view -> {
+//            if (!listening) {
+//                userStopped = false;
+//                startListening();
+//            } else {
+//                userStopped = true;
+//                stopListening();
+//            }
+            applyFunction.apply(userInput.getText().toString());
+        }));
+
+        if (!PermissionManager.checkPermissions(this))
+            PermissionManager.askPermissions(this);
+
+        askForAccount();
+        switchFragment(ConversationFragment.newInstance("I'm your assistant, if you need help just ask for it!"));
     }
 
-    public void onMicPress(View view) {
-
-        if(index == fragmentList.size()) {
-            Intent intent = new Intent(this, CalendarActivity.class);
-            startActivity(intent);
-        }
-        else {
-            switchFragment(fragmentList.get(index));
-        }
-        index++;
-        if(index > fragmentList.size())
-            index = 0;
-
+    public void stopListeningUser() {
+        stopListening();
+        userStopped = true;
     }
 
-    private void switchFragment(Fragment fragment) {
+    public void startListening() {
+        System.out.println("start");
+        TextToSpeechInstance.stop();
+        if (!userStopped) {
+            micButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.colorPrimary)));
+            micButton.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FFFFFF")));
+            speechRecognizer.startListening(speechRecognizerIntent);
+            listening = true;
+        }
+    }
+
+    public void stopListening() {
+        System.out.println("stop");
+        speechRecognizer.stopListening();
+        micButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.colorAccent)));
+        micButton.setImageTintList(ColorStateList.valueOf(Color.parseColor("#cfcfcf")));
+        listening = false;
+    }
+
+    private void askForAccount() {
+        if (account == null || account.equals("")) {
+            Intent intent = AccountManager.newChooseAccountIntent(null, null, new String[]{"com.google"},
+                    null, null, null, null);
+            startActivityForResult(intent, REQUEST_ACCOUNT_CODE);
+        }
+    }
+
+    public void switchFragment(Fragment fragment) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-
+        transaction.setCustomAnimations(R.anim.enter_from_top, R.anim.exit_to_bottom);
         transaction.replace(R.id.fragmentContainer, fragment);
-        transaction.addToBackStack(null);
-
         transaction.commit();
+    }
+
+    public void setSpeechRecognizer(RecognitionListener recognitionListener) {
+        speechRecognizer.setRecognitionListener(recognitionListener);
+    }
+
+    // This function is called when user accept or decline the permission.
+// Request Code is used to check which permission called this function.
+// This request code is provided when user is prompt for permission.
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        System.out.println("RESULT CODE");
+        System.out.println(resultCode);
+        if (resultCode == 0) {
+            Intent intent = AccountManager.newChooseAccountIntent(null, null, new String[]{"com.google"},
+                    null, null, null, null);
+            startActivityForResult(intent, REQUEST_ACCOUNT_CODE);
+        } else if (requestCode == REQUEST_ACCOUNT_CODE) {
+            String account = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+            saveAccount(account);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSION_ALL_CODE) {
+            if (Utils.intArrayContains(grantResults, PackageManager.PERMISSION_DENIED)) {
+                Intent intent = new Intent(this, PermissionsActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                finish();
+            }
+        }
+    }
+
+    private void saveAccount(String account) {
+        SharedPreferences.Editor editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit();
+        editor.putString("account", account);
+        editor.apply();
+    }
+
+    private void readData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("data", MODE_PRIVATE);
+            String taskListJson = prefs.getString("taskList", "");
+            String shoppingListsJson = prefs.getString("shoppingLists", "");
+            account = prefs.getString("account", "");
+            Gson gson = new Gson();
+            setTaskList(gson.fromJson(taskListJson, List.class));
+            setShoppingLists(gson.fromJson(shoppingListsJson, Map.class));
+        } catch (Exception e) {
+            System.out.println("Problem serializing: " + e);
+        }
+    }
+
+    public List<String> getTaskList() {
+        return taskList;
+    }
+
+    public void setTaskList(List<String> taskList) {
+        Gson gson = new Gson();
+        if (taskList != null) {
+            lastModifiedJson = gson.toJson(this.taskList);
+            lastModifiedType = ListTypes.TASKS;
+            this.taskList = taskList;
+        } else
+            this.taskList = new ArrayList<>();
+
+        SharedPreferences.Editor editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit();
+        String taskListJson = gson.toJson(taskList);
+        editor.putString("taskList", taskListJson);
+        editor.apply();
+    }
+
+    public Map<String, ArrayList<String>> getShoppingLists() {
+        return shoppingLists;
+    }
+
+    public void setShoppingLists(Map<String, ArrayList<String>> shoppingLists) {
+        Gson gson = new Gson();
+        if (shoppingLists != null) {
+            lastModifiedJson = gson.toJson(this.taskList);
+            lastModifiedType = ListTypes.SHOPPING;
+            this.shoppingLists = shoppingLists;
+        } else
+            this.shoppingLists = new HashMap<>();
+
+        SharedPreferences.Editor editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit();
+        String shoppingListsJson = gson.toJson(shoppingLists);
+        editor.putString("shoppingLists", shoppingListsJson);
+        editor.apply();
+    }
+
+    public ApplyFunction getApplyFunction() {
+        return applyFunction;
+    }
+
+    public void setApplyFunction(ApplyFunction applyFunction) {
+        this.applyFunction = applyFunction;
+    }
+
+    @Override
+    protected void onDestroy() {
+        TextToSpeechInstance.shutdown();
+        super.onDestroy();
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void undoLastModification() {
+        Gson gson = new Gson();
+        switch (lastModifiedType) {
+            case TASKS:
+                setTaskList(gson.fromJson(lastModifiedJson, List.class));
+                lastModifiedType = null;
+                fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.restored_list, "the tasks")));
+                break;
+            case SHOPPING:
+                setShoppingLists(gson.fromJson(lastModifiedJson, Map.class));
+                lastModifiedType = null;
+                fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.restored_list, "the shopping lists")));
+                break;
+            case EVENTS:
+                break;
+            default:
+                fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.nothing_to_undone)));
+                break;
+
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        userStopped = true;
+        speechRecognizer.stopListening();
     }
 }
