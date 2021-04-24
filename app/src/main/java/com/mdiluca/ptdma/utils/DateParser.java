@@ -24,15 +24,16 @@ public class DateParser {
     private static final String fullDateInversedExp = "\\w+.* \\d+.* \\d+ " + timeExp;
     private static final String fullDateInversedAmPmExp = "\\w+.* \\d+.* \\d+ " + timeAmPmExp;
 
-    private static final String inTimeExp = "in \\d+ (hours|minutes|seconds).";
+    private static final String inTimeExp = "in \\d+ ?(hours|minutes|seconds)?";
     private static final String inTimeStepExp = "in one (hour|minute|second)";
 
     private static final String inDateExp = "in \\d+ (days|months|years) " + timeExp;
-    private static final String inDateStepExp = "in one (hour|minute|second) " + timeExp;
+    private static final String inDateStepExp = "in one (day|month|year) " + timeExp;
+    private static final String inDateStepAmPmExp = "in one (day|month|year) " + timeAmPmExp;
     private static final String inDateAmPmExp = "in \\d+ (days|months|years) " + timeAmPmExp;
-    private static final String inDateStepAmPmExp = "in one (hour|minute|second) " + timeAmPmExp;
 
     public static Calendar parseDate(String dateString) {
+        System.out.println(dateString);
         Calendar now = Calendar.getInstance();
         List<String> words = Arrays.asList(dateString.split("\\s+"));
         if (dateString.matches(fullDateExpMinusOf) || dateString.matches(fullDateExp) || dateString.matches(fullDateAmPmExp) ||
@@ -145,6 +146,7 @@ public class DateParser {
                 } else {
                     now.set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DATE), time[0], time[1]);
                 }
+                return now;
             }
         }
         return null;

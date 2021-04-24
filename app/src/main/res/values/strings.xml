@@ -32,6 +32,7 @@
     <string name="empty_list">There is no item here. Try to say \"add new item\" to create the first one!</string>
     <string name="restored_list">The last action on %s has been undone</string>
     <string name="nothing_to_undone">There is nothing to undone</string>
+    <string name="already_empty">There are no items to delete</string>
 
     <!-- Calendar -->
     <string name="empty_event_list">There are no events for the selected date.</string>

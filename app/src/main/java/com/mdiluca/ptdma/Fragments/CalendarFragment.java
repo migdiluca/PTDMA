@@ -80,6 +80,7 @@ public class CalendarFragment extends Fragment {
 
         @Override
         public void onResults(Bundle bundle) {
+            stopListening.apply();
             if (bundle != null) {
                 ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 String resp = data.get(0);
@@ -256,6 +257,7 @@ public class CalendarFragment extends Fragment {
                 if(twoWords.length > 1)
                     deleteEvent(twoWords[1]);
                 break;
+            case "change":
             case "edit":
             case "rename":
                 int i = words.indexOf("to");
@@ -268,7 +270,9 @@ public class CalendarFragment extends Fragment {
                 }
                 break;
             default:
-                ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
+                boolean entered = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
+                if(!entered)
+                    TextToSpeechInstance.speak(getString(R.string.no_understand));
                 break;
         }
     };

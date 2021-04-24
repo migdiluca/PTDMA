@@ -210,7 +210,8 @@ public class ListFragment extends Fragment {
             if (!sl.containsKey(text)) {
                 sl.put(text, new ArrayList<>());
                 ma.setShoppingLists(sl);
-                adapter.add(text);
+                list.add(text);
+                adapter.notifyDataSetChanged();
             } else {
                 setAssistantResponse(getString(R.string.shopping_list_already_exists));
             }
@@ -220,9 +221,11 @@ public class ListFragment extends Fragment {
             ma.setTaskList(list);
         } else {
             Map<String, ArrayList<String>> sl = ma.getShoppingLists();
-            adapter.add(text);
+            list.add(text);
+            adapter.notifyDataSetChanged();
             ma.setShoppingLists(sl);
         }
+
 
         if (list.size() == 1) {
             emptyWarning.setVisibility(View.GONE);
@@ -232,8 +235,8 @@ public class ListFragment extends Fragment {
 
     private void deleteAllItems() {
         MainActivity ma = (MainActivity) getActivity();
-        list = new ArrayList<>();
-        adapter.notifyDataSetChanged();
+        list.clear();
+        adapter.clear();
         if (shoppingLists) {
             ma.setShoppingLists(new HashMap<>());
         } else if (tasks) {
@@ -250,8 +253,8 @@ public class ListFragment extends Fragment {
 
     private void deleteItem(String text) {
         MainActivity ma = (MainActivity) getActivity();
-        adapter.remove(text);
         list.remove(text);
+        adapter.notifyDataSetChanged();
         assert ma != null;
         if (shoppingLists) {
             Map<String, ArrayList<String>> sl = ma.getShoppingLists();
@@ -317,6 +320,7 @@ public class ListFragment extends Fragment {
         List<String> words = Arrays.asList(resp.split("\\s+"));
         boolean commandUsed = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
         if (!commandUsed) {
+            commandUsed = true;
             if (deleting) {
                 switch (resp) {
                     case "okay":
@@ -330,6 +334,8 @@ public class ListFragment extends Fragment {
                         setAssistantResponse(getString(R.string.delete_canceled));
                         deleting = false;
                         break;
+                    default:
+                        commandUsed = false;
                 }
             } else {
                 switch (twoWords[0]) {
@@ -337,17 +343,20 @@ public class ListFragment extends Fragment {
                     case "remove":
                     case "erase":
                         toDeleteItem = twoWords[1];
-
-                        if (list.contains(toDeleteItem)) {
-                            deleteItem(toDeleteItem);
-                        } else if (words.size() <= 3 && words.get(1).equals("all")) {
-                            deleting = true;
-                            awaitsResponse = true;
-                            setAssistantResponse(getString(R.string.delete_confirmation, "all items"));
+                        if (list.size() == 0) {
+                            setAssistantResponse(getString(R.string.already_empty));
                         } else {
-                            setAssistantResponse(getString(R.string.item_not_found, toDeleteItem));
+                            if (list.contains(toDeleteItem)) {
+                                deleteItem(toDeleteItem);
+                            } else if (words.size() <= 2 && words.get(1).equals("all")) {
+                                deleting = true;
+                                awaitsResponse = true;
+                                setAssistantResponse(getString(R.string.delete_confirmation, "all items"));
+
+                            } else {
+                                setAssistantResponse(getString(R.string.item_not_found, toDeleteItem));
+                            }
                         }
-                        assistantCardView.setVisibility(View.VISIBLE);
                         break;
                     case "enter":
                     case "open":
@@ -373,6 +382,7 @@ public class ListFragment extends Fragment {
                         }
                         break;
                     case "rename":
+                    case "change":
                     case "edit":
                         i = words.indexOf("to");
                         if (i > 0 && words.size() >= 4) {
@@ -396,7 +406,7 @@ public class ListFragment extends Fragment {
                 }
             }
         }
-        if(!commandUsed) {
+        if (!commandUsed) {
             awaitsResponse = true;
             setAssistantResponse(getString(R.string.no_understand));
         }
