@@ -35,6 +35,7 @@
     <string name="already_empty">There are no items to delete</string>
     <string name="item_rename">%s was renamed to %s</string>
     <string name="item_created">%s was created</string>
+    <string name="item_not_found2">The item \'%s\' does not exists</string>
 
     <!-- Calendar -->
     <string name="empty_event_list">There are no events for the selected date.</string>

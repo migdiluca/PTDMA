@@ -12,6 +12,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.mdiluca.ptdma.MainActivity;
+import com.mdiluca.ptdma.Models.Enum.ListTypes;
 import com.mdiluca.ptdma.R;
 import com.mdiluca.ptdma.Tools.TextToSpeechInstance;
 import com.mdiluca.ptdma.utils.Utils;
@@ -107,6 +108,7 @@ public class ListFragment extends ListenerFragment {
     private void addShoppingItem(String list, String item) {
         MainActivity ma = (MainActivity) getActivity();
         assert ma != null;
+        saveState();
         Map<String, ArrayList<String>> sl = ma.getShoppingLists();
         if (sl.containsKey(list)) {
             ArrayList<String> listItems = sl.get(list);
@@ -120,6 +122,7 @@ public class ListFragment extends ListenerFragment {
     private void addItem(String text) {
         MainActivity ma = (MainActivity) getActivity();
         assert ma != null;
+        saveState();
         if (shoppingLists) {
             Map<String, ArrayList<String>> sl = ma.getShoppingLists();
             if (!sl.containsKey(text)) {
@@ -138,6 +141,7 @@ public class ListFragment extends ListenerFragment {
             Map<String, ArrayList<String>> sl = ma.getShoppingLists();
             list.add(text);
             adapter.notifyDataSetChanged();
+            sl.put(title, list);
             ma.setShoppingLists(sl);
         }
 
@@ -152,6 +156,7 @@ public class ListFragment extends ListenerFragment {
 
     private void deleteAllItems() {
         MainActivity ma = (MainActivity) getActivity();
+        saveState();
         list.clear();
         adapter.clear();
         if (shoppingLists) {
@@ -170,6 +175,8 @@ public class ListFragment extends ListenerFragment {
 
     private void deleteItem(String text) {
         MainActivity ma = (MainActivity) getActivity();
+        saveState();
+
         list.remove(text);
         adapter.notifyDataSetChanged();
         assert ma != null;
@@ -202,34 +209,46 @@ public class ListFragment extends ListenerFragment {
         TextToSpeechInstance.speak(assistantResponse);
     }
 
+    private void saveState() {
+        MainActivity ma = (MainActivity) getActivity();
+        if (tasks)
+            ma.saveState(ListTypes.TASKS);
+        else
+            ma.saveState(ListTypes.SHOPPING);
+    }
+
     private void renameItem(String oldName, String newName) {
         MainActivity ma = (MainActivity) getActivity();
-
+        saveState();
         int index = list.indexOf(oldName);
-        list.remove(index);
-        list.add(index, newName);
-        adapter.notifyDataSetChanged();
-        if (shoppingLists) {
-            Map<String, ArrayList<String>> sl = ma.getShoppingLists();
-            ArrayList<String> list = sl.get(oldName);
-            sl.remove(oldName);
-            sl.put(newName, list);
-            ma.setShoppingLists(sl);
-        } else if (tasks) {
-            ma.setTaskList(list);
-        } else {
-            Map<String, ArrayList<String>> sl = ma.getShoppingLists();
-            ArrayList<String> myList = sl.get(title);
+        if(index > 0) {
+            list.remove(index);
+            list.add(index, newName);
+            adapter.notifyDataSetChanged();
+            if (shoppingLists) {
+                Map<String, ArrayList<String>> sl = ma.getShoppingLists();
+                ArrayList<String> list = sl.get(oldName);
+                sl.remove(oldName);
+                sl.put(newName, list);
+                ma.setShoppingLists(sl);
+            } else if (tasks) {
+                ma.setTaskList(list);
+            } else {
+                Map<String, ArrayList<String>> sl = ma.getShoppingLists();
+                ArrayList<String> myList = sl.get(title);
 
-            if (myList != null) {
-                myList.remove(oldName);
-                myList.add(newName);
-                sl.put(title, myList);
+                if (myList != null) {
+                    myList.remove(oldName);
+                    myList.add(newName);
+                    sl.put(title, myList);
+                }
+                ma.setShoppingLists(sl);
             }
-            ma.setShoppingLists(sl);
-        }
 
-        setAssistantResponse(getString(R.string.item_rename, oldName, newName));
+            setAssistantResponse(getString(R.string.item_rename, oldName, newName));
+        } else {
+            setAssistantResponse(getString(R.string.item_not_found2, oldName));
+        }
     }
 
     @Override
@@ -276,7 +295,7 @@ public class ListFragment extends ListenerFragment {
                         return true;
                     case "enter":
                     case "open":
-                        if(twoWords.length > 1) {
+                        if (twoWords.length > 1) {
                             if (shoppingLists && list.contains(twoWords[1])) {
                                 fragmentSwitcher.switcher(ListFragment.newInstance(twoWords[1]));
                             } else {

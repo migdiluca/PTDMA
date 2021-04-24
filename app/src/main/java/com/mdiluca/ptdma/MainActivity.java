@@ -174,20 +174,24 @@ public class MainActivity extends ToastOnBackActivity {
             System.out.println("Problem serializing: " + e);
         }
     }
+    public void saveState(ListTypes listType) {
+        lastModifiedType = listType;
+        Gson gson = new Gson();
+        if(listType.equals(ListTypes.TASKS)) {
+            lastModifiedJson = gson.toJson(this.taskList);
+        } else if(listType.equals(ListTypes.SHOPPING)) {
+            lastModifiedJson = gson.toJson(this.shoppingLists);
+        }
+    }
+
 
     public List<String> getTaskList() {
         return taskList;
     }
 
     public void setTaskList(List<String> taskList) {
+        this.taskList = taskList;
         Gson gson = new Gson();
-        if (taskList != null) {
-            lastModifiedJson = gson.toJson(this.taskList);
-            lastModifiedType = ListTypes.TASKS;
-            this.taskList = taskList;
-        } else
-            this.taskList = new ArrayList<>();
-
         SharedPreferences.Editor editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit();
         String taskListJson = gson.toJson(taskList);
         editor.putString("taskList", taskListJson);
@@ -199,14 +203,8 @@ public class MainActivity extends ToastOnBackActivity {
     }
 
     public void setShoppingLists(Map<String, ArrayList<String>> shoppingLists) {
+        this.shoppingLists = shoppingLists;
         Gson gson = new Gson();
-        if (shoppingLists != null) {
-            lastModifiedJson = gson.toJson(this.taskList);
-            lastModifiedType = ListTypes.SHOPPING;
-            this.shoppingLists = shoppingLists;
-        } else
-            this.shoppingLists = new HashMap<>();
-
         SharedPreferences.Editor editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit();
         String shoppingListsJson = gson.toJson(shoppingLists);
         editor.putString("shoppingLists", shoppingListsJson);
