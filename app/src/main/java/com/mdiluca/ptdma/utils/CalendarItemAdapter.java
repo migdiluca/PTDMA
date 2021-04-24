@@ -47,11 +47,9 @@ public class CalendarItemAdapter extends BaseAdapter {
     public View getView(int position, View view, ViewGroup viewGroup) {
         View v;
         if (view == null) {
-            //Inflamos el layout de nuestros items en nuestra vista v
             LayoutInflater inflater = LayoutInflater.from(this.context);
             v = inflater.inflate(R.layout.calendar_item, null);
         }
-        //Partimos de la vista que nos pasa Android, que ya tiene cargado el layout.
         else
             v = view;
 

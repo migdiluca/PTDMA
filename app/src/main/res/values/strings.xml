@@ -33,11 +33,14 @@
     <string name="restored_list">The last action on %s has been undone</string>
     <string name="nothing_to_undone">There is nothing to undone</string>
     <string name="already_empty">There are no items to delete</string>
+    <string name="item_rename">%s was renamed to %s</string>
+    <string name="item_created">%s was created</string>
 
     <!-- Calendar -->
     <string name="empty_event_list">There are no events for the selected date.</string>
     <string name="event_deleted">The event was deleted</string>
     <string name="event_modified">The event was modified</string>
+    <string name="event_not_found">The event \'%s\' was not found</string>
 
     <!-- General -->
     <string name="delete_confirmation">Are you sure you want to delete %s?</string>

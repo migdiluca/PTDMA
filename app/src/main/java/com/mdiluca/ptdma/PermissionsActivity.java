@@ -1,13 +1,11 @@
 package com.mdiluca.ptdma;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.widget.Button;
-import android.widget.Toast;
 
 import com.mdiluca.ptdma.Tools.PermissionManager;
 import com.mdiluca.ptdma.utils.Utils;
@@ -15,9 +13,6 @@ import com.mdiluca.ptdma.utils.Utils;
 import static com.mdiluca.ptdma.Tools.PermissionManager.PERMISSION_ALL_CODE;
 
 public class PermissionsActivity extends ToastOnBackActivity {
-
-    private long lastBackPressedTime = -1;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

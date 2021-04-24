@@ -3,12 +3,7 @@ package com.mdiluca.ptdma.Fragments;
 import android.os.Bundle;
 
 import androidx.cardview.widget.CardView;
-import androidx.fragment.app.Fragment;
 
-import android.os.Handler;
-import android.speech.RecognitionListener;
-import android.speech.SpeechRecognizer;
-import android.speech.tts.UtteranceProgressListener;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,11 +11,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
-import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.R;
-import com.mdiluca.ptdma.Tools.ConversationVoiceRecognizer;
 import com.mdiluca.ptdma.Tools.TextToSpeechInstance;
 import com.mdiluca.ptdma.utils.Utils;
 
@@ -30,92 +22,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ListFragment extends Fragment {
+public class ListFragment extends ListenerFragment {
 
     private static final String titleParameter = "name";
     private static final String tasksBool = "tasksBool";
     private static final String shoppingListsBool = "shoppingListsBool";
+
+    private String title;
     private boolean tasks;
     private boolean shoppingLists;
-    private boolean awaitsResponse = false;
+
     private boolean deleting = false;
     private String toDeleteItem;
     private ArrayList<String> list;
     private ArrayAdapter<String> adapter;
-    private String title;
     private TextView assistantText;
     private TextView emptyWarning;
     private CardView assistantCardView;
-    private SimpleFunction startListening;
-    private SimpleFunction stopListening;
-
-    private FragmentSwitcher fragmentSwitcher;
-
-    private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
-        @Override
-        public void onDone(String utteranceId) {
-            if (awaitsResponse) {
-                Handler mainHandler = new Handler(getContext().getMainLooper());
-                Runnable myRunnable = () -> startListening.apply();
-                mainHandler.post(myRunnable);
-                awaitsResponse = false;
-            }
-        }
-
-        @Override
-        public void onError(String utteranceId) {
-
-        }
-
-        @Override
-        public void onStart(String utteranceId) {
-
-        }
-    };
-
-    private RecognitionListener recognitionListener = new RecognitionListener() {
-        @Override
-        public void onReadyForSpeech(Bundle bundle) {
-        }
-
-        @Override
-        public void onBeginningOfSpeech() {
-        }
-
-        @Override
-        public void onRmsChanged(float v) {
-        }
-
-        @Override
-        public void onBufferReceived(byte[] bytes) {
-        }
-
-        @Override
-        public void onEndOfSpeech() {
-        }
-
-        @Override
-        public void onError(int i) {
-            stopListening.apply();
-        }
-
-        @Override
-        public void onResults(Bundle bundle) {
-            if (bundle != null) {
-                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                String resp = data.get(0);
-                processVoice(resp);
-            }
-        }
-
-        @Override
-        public void onPartialResults(Bundle bundle) {
-        }
-
-        @Override
-        public void onEvent(int i, Bundle bundle) {
-        }
-    };
 
     public ListFragment() {
         // Required empty public constructor
@@ -150,7 +73,6 @@ public class ListFragment extends Fragment {
         }
 
         MainActivity mainActivity = (MainActivity) getActivity();
-        fragmentSwitcher = mainActivity.fragmentSwitcher;
         if (tasks) {
             list = (ArrayList<String>) mainActivity.getTaskList();
         } else if (shoppingLists) {
@@ -158,12 +80,6 @@ public class ListFragment extends Fragment {
         } else {
             list = mainActivity.getShoppingLists().get(title);
         }
-        mainActivity.setSpeechRecognizer(recognitionListener);
-
-        startListening = mainActivity::startListening;
-        stopListening = mainActivity::stopListening;
-
-        TextToSpeechInstance.setOnUtteranceProgressListener(utteranceProgressListener);
     }
 
     @Override
@@ -226,6 +142,8 @@ public class ListFragment extends Fragment {
             ma.setShoppingLists(sl);
         }
 
+        setAssistantResponse(getString(R.string.item_created, text));
+
 
         if (list.size() == 1) {
             emptyWarning.setVisibility(View.GONE);
@@ -279,7 +197,7 @@ public class ListFragment extends Fragment {
         }
     }
 
-    private void setAssistantResponse(String assistantResponse) {
+    void setAssistantResponse(String assistantResponse) {
         assistantCardView.setVisibility(View.VISIBLE);
         assistantText.setText(assistantResponse);
         TextToSpeechInstance.speak(assistantResponse);
@@ -311,16 +229,17 @@ public class ListFragment extends Fragment {
             }
             ma.setShoppingLists(sl);
         }
+
+        setAssistantResponse(getString(R.string.item_rename, oldName, newName));
     }
 
-    private void processVoice(String resp) {
-        stopListening.apply();
+    @Override
+    boolean processVoice(String resp) {
+        boolean alreadyProcessed = super.processVoice(resp);
         assistantCardView.setVisibility(View.GONE);
-        String[] twoWords = resp.split(" ", 2);
-        List<String> words = Arrays.asList(resp.split("\\s+"));
-        boolean commandUsed = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
-        if (!commandUsed) {
-            commandUsed = true;
+        if (!alreadyProcessed) {
+            String[] twoWords = resp.split(" ", 2);
+            List<String> words = Arrays.asList(resp.split("\\s+"));
             if (deleting) {
                 switch (resp) {
                     case "okay":
@@ -328,14 +247,12 @@ public class ListFragment extends Fragment {
                     case "yes":
                         deleteAllItems();
                         deleting = false;
-                        break;
+                        return true;
                     case "cancel":
                     case "no":
                         setAssistantResponse(getString(R.string.delete_canceled));
                         deleting = false;
-                        break;
-                    default:
-                        commandUsed = false;
+                        return true;
                 }
             } else {
                 switch (twoWords[0]) {
@@ -357,7 +274,7 @@ public class ListFragment extends Fragment {
                                 setAssistantResponse(getString(R.string.item_not_found, toDeleteItem));
                             }
                         }
-                        break;
+                        return true;
                     case "enter":
                     case "open":
                         if (shoppingLists && list.contains(twoWords[1])) {
@@ -380,7 +297,7 @@ public class ListFragment extends Fragment {
                         } else if (twoWords.length > 1 && twoWords[1].length() > 0) {
                             addItem(twoWords[1]);
                         }
-                        break;
+                        return true;
                     case "rename":
                     case "change":
                     case "edit":
@@ -399,16 +316,12 @@ public class ListFragment extends Fragment {
                                 }
                             }
                         }
-                        break;
-                    default:
-                        commandUsed = false;
-                        break;
+                        return true;
                 }
             }
+
+            onNoCommandDetected();
         }
-        if (!commandUsed) {
-            awaitsResponse = true;
-            setAssistantResponse(getString(R.string.no_understand));
-        }
+        return true;
     }
 }

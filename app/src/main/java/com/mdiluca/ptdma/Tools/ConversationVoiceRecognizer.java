@@ -1,16 +1,12 @@
 package com.mdiluca.ptdma.Tools;
 
 import android.app.Activity;
-import android.app.UiModeManager;
-
 import com.mdiluca.ptdma.Fragments.AddToDoFragment;
 import com.mdiluca.ptdma.Fragments.CalendarFragment;
-import com.mdiluca.ptdma.Fragments.ConversationFragment;
 import com.mdiluca.ptdma.Fragments.HelpFragment;
 import com.mdiluca.ptdma.Fragments.ListFragment;
 import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
 import com.mdiluca.ptdma.MainActivity;
-import com.mdiluca.ptdma.R;
 
 public class ConversationVoiceRecognizer {
 

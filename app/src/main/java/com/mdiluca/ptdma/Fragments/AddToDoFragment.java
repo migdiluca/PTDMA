@@ -5,12 +5,7 @@ import android.app.TimePickerDialog;
 import android.os.Bundle;
 
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
 
-import android.os.Handler;
-import android.speech.RecognitionListener;
-import android.speech.SpeechRecognizer;
-import android.speech.tts.UtteranceProgressListener;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,9 +18,7 @@ import android.widget.TimePicker;
 
 import com.mdiluca.ptdma.Fragments.Pickers.DatePickerFragment;
 import com.mdiluca.ptdma.Fragments.Pickers.TimePickerFragment;
-import com.mdiluca.ptdma.Interfaces.SimpleFunction;
 import com.mdiluca.ptdma.Models.Enum.ConversationState;
-import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
 import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.Models.Event;
 import com.mdiluca.ptdma.R;
@@ -41,16 +34,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDateSetListener, TimePickerDialog.OnTimeSetListener {
+public class AddToDoFragment extends ListenerFragment implements DatePickerDialog.OnDateSetListener, TimePickerDialog.OnTimeSetListener {
 
     private static final String ARG_PARAM1 = "withDate";
     private static final String ARG_PARAM2 = "shoppingList";
     private Boolean shoppingList;
     private Boolean withDate;
-    private FragmentSwitcher fragmentSwitcher;
-    private SimpleFunction startListening;
-    private SimpleFunction stopListening;
-    private SimpleFunction stopListeningUser;
 
     SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm dd MMMM yyyy", Locale.US);
 
@@ -66,67 +55,6 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
     private Calendar selectedDate = null;
 
     private ConversationState conversationState = ConversationState.ASK_TITLE;
-
-    private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
-        @Override
-        public void onDone(String utteranceId) {
-            Handler mainHandler = new Handler(getContext().getMainLooper());
-            Runnable myRunnable = () -> startListening.apply();
-            mainHandler.post(myRunnable);
-        }
-
-        @Override
-        public void onError(String utteranceId) {
-
-        }
-
-        @Override
-        public void onStart(String utteranceId) {
-
-        }
-    };
-
-    private RecognitionListener recognitionListener = new RecognitionListener() {
-        @Override
-        public void onReadyForSpeech(Bundle bundle) {
-            userTouchedInputs = false;
-        }
-
-        @Override
-        public void onBeginningOfSpeech() { }
-
-        @Override
-        public void onRmsChanged(float v) { }
-
-        @Override
-        public void onBufferReceived(byte[] bytes) { }
-
-        @Override
-        public void onEndOfSpeech() {
-        }
-
-        @Override
-        public void onError(int i) {
-            stopListening.apply();
-        }
-
-        @Override
-        public void onResults(Bundle bundle) {
-            String resp = "";
-            if (bundle != null) {
-                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                resp = data.get(0);
-            }
-
-            processVoice(resp);
-        }
-
-        @Override
-        public void onPartialResults(Bundle bundle) { }
-
-        @Override
-        public void onEvent(int i, Bundle bundle) { }
-    };
 
     public AddToDoFragment() {
         // Required empty public constructor
@@ -155,17 +83,6 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
             withDate = getArguments().getBoolean(ARG_PARAM1);
             shoppingList = getArguments().getBoolean(ARG_PARAM2);
         }
-
-        MainActivity mainActivity = (MainActivity) getActivity();
-        fragmentSwitcher = mainActivity.fragmentSwitcher;
-
-        mainActivity.setSpeechRecognizer(recognitionListener);
-
-        startListening = mainActivity::startListening;
-        stopListening = mainActivity::stopListening;
-        stopListeningUser = mainActivity::stopListeningUser;
-
-        TextToSpeechInstance.setOnUtteranceProgressListener(utteranceProgressListener);
     }
 
     @Override
@@ -201,7 +118,7 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
                     setAssistantResponse(getString(R.string.fields_empty));
             } else {
                 if (hasTitle) {
-                    if(shoppingList)
+                    if (shoppingList)
                         addShoppingList();
                     else
                         addTask();
@@ -214,7 +131,7 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         titleText = inf.findViewById(R.id.titleText);
         dateText = inf.findViewById(R.id.dateText);
 
-        titleText.setOnTouchListener(((v,e) -> {
+        titleText.setOnTouchListener(((v, e) -> {
             onInputClick();
             return false;
         }));
@@ -243,7 +160,6 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         shoppingLists.put(titleText.getText().toString(), new ArrayList<>());
         ma.setShoppingLists(shoppingLists);
 
-
         fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.shopping_list_added, titleText.getText())));
     }
 
@@ -264,8 +180,8 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.task_added, titleText.getText())));
     }
 
-    private void setAssistantResponse(String assistantResponse) {
-        if(!userTouchedInputs) {
+    void setAssistantResponse(String assistantResponse) {
+        if (!userTouchedInputs) {
             assistantText.setText(assistantResponse);
             TextToSpeechInstance.speak(assistantResponse);
         }
@@ -275,7 +191,7 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         String title = titleText.getText().toString();
         if (!title.isEmpty()) {
             boolean added = CalendarManager.addEvent(new Event(title, date), getActivity());
-            if(added)
+            if (added)
                 fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.event_added, title, dateFormat.format(date.getTime()))));
             else
                 fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.calendar_error)));
@@ -300,9 +216,10 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
         dateText.setText(dateFormat.format(selectedDate.getTime()));
     }
 
-    private void processVoice(String resp) {
-        stopListening.apply();
-        if(resp.equals("cancel")) {
+    @Override
+    boolean processVoice(String resp) {
+        awaitsResponse = true;
+        if (resp.equals("cancel")) {
             fragmentSwitcher.switcher(ConversationFragment.newInstance(getString(R.string.add_canceled)));
         } else {
             switch (conversationState) {
@@ -333,5 +250,6 @@ public class AddToDoFragment extends Fragment implements DatePickerDialog.OnDate
                     break;
             }
         }
+        return true;
     }
 }

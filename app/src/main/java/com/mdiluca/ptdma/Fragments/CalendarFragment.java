@@ -5,10 +5,7 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.ViewCompat;
-import androidx.fragment.app.Fragment;
 
-import android.speech.RecognitionListener;
-import android.speech.SpeechRecognizer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,16 +16,12 @@ import android.widget.TextView;
 
 import com.github.sundeepk.compactcalendarview.CompactCalendarView;
 import com.google.android.material.appbar.AppBarLayout;
-import com.mdiluca.ptdma.Interfaces.FragmentSwitcher;
-import com.mdiluca.ptdma.Interfaces.SimpleFunction;
-import com.mdiluca.ptdma.MainActivity;
 import com.mdiluca.ptdma.Models.Event;
 import com.mdiluca.ptdma.R;
 import com.mdiluca.ptdma.Tools.TextToSpeechInstance;
 import com.mdiluca.ptdma.utils.AppBarStateChangeListener;
 import com.mdiluca.ptdma.utils.CalendarItemAdapter;
 import com.mdiluca.ptdma.Tools.CalendarManager;
-import com.mdiluca.ptdma.Tools.ConversationVoiceRecognizer;
 import com.mdiluca.ptdma.utils.Utils;
 
 import java.text.SimpleDateFormat;
@@ -40,7 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class CalendarFragment extends Fragment {
+public class CalendarFragment extends ListenerFragment {
 
     private AppBarLayout appBarLayout;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy MMMM, dd", Locale.ENGLISH);
@@ -49,53 +42,7 @@ public class CalendarFragment extends Fragment {
     private Date selectedDate;
     private TextView datePickerTextView;
     private TextView noEventsWarning;
-    private FragmentSwitcher fragmentSwitcher;
     private CalendarItemAdapter myAdapter;
-    private SimpleFunction stopListening;
-
-    private RecognitionListener recognitionListener = new RecognitionListener() {
-        @Override
-        public void onReadyForSpeech(Bundle bundle) {
-        }
-
-        @Override
-        public void onBeginningOfSpeech() {
-        }
-
-        @Override
-        public void onRmsChanged(float v) {
-        }
-
-        @Override
-        public void onBufferReceived(byte[] bytes) {
-        }
-
-        @Override
-        public void onEndOfSpeech() {
-        }
-
-        @Override
-        public void onError(int i) {
-        }
-
-        @Override
-        public void onResults(Bundle bundle) {
-            stopListening.apply();
-            if (bundle != null) {
-                ArrayList<String> data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                String resp = data.get(0);
-                processVoice(resp);
-            }
-        }
-
-        @Override
-        public void onPartialResults(Bundle bundle) {
-        }
-
-        @Override
-        public void onEvent(int i, Bundle bundle) {
-        }
-    };
 
     ListView simpleList;
     List<Event> eventList = new ArrayList<>();
@@ -139,13 +86,11 @@ public class CalendarFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
 
-        MainActivity mainActivity = (MainActivity) getActivity();
-        fragmentSwitcher = mainActivity.fragmentSwitcher;
-
-        mainActivity.setSpeechRecognizer(recognitionListener);
-
-        stopListening = mainActivity::stopListening;
+    @Override
+    void setAssistantResponse(String resp) {
+        TextToSpeechInstance.speak(resp);
     }
 
     @Override
@@ -220,16 +165,17 @@ public class CalendarFragment extends Fragment {
     private long deleteEvent(String name) {
         for (int i = 0; i < eventList.size(); i++) {
             Event e = eventList.get(i);
-            if (e.getTitle().equals(name)) {
+            if (e.getTitle().equalsIgnoreCase(name)) {
                 CalendarManager.deleteEvent(getActivity(), e.getId());
                 eventList.remove(i);
                 updateList();
                 if (eventList.isEmpty())
                     noEventsWarning.setVisibility(View.VISIBLE);
-                TextToSpeechInstance.speak(getString(R.string.event_deleted));
+                setAssistantResponse(getString(R.string.event_deleted));
                 return e.getId();
             }
         }
+        setAssistantResponse(getString(R.string.event_not_found, name));
         return -1;
     }
 
@@ -241,39 +187,41 @@ public class CalendarFragment extends Fragment {
                 CalendarManager.editEvent(getActivity(), event.getId(), newName);
                 event.setTitle(newName);
                 updateList();
-                TextToSpeechInstance.speak(getString(R.string.event_modified));
+                setAssistantResponse(getString(R.string.event_modified));
                 break;
             }
         }
     }
 
-    private void processVoice(String resp) {
-        String[] twoWords = resp.split(" ", 2);
-        List<String> words = Arrays.asList(resp.split("\\s+"));
-        switch (twoWords[0]) {
-            case "delete":
-            case "remove":
-            case "erase":
-                if(twoWords.length > 1)
-                    deleteEvent(twoWords[1]);
-                break;
-            case "change":
-            case "edit":
-            case "rename":
-                int i = words.indexOf("to");
-                if (i > 0 && words.size() >= 4) {
-                    String eventName = Utils.getStringFromList(words.subList(1, i));
-                    String newEventName = Utils.getStringFromList(words.subList(i + 1, words.size()));
-                    if (eventName.length() > 0 && newEventName.length() > 0) {
-                        editEvent(eventName, newEventName);
+    @Override
+    boolean processVoice(String resp) {
+        boolean alreadyProcessed = super.processVoice(resp);
+        if (!alreadyProcessed) {
+            String[] twoWords = resp.split(" ", 2);
+            List<String> words = Arrays.asList(resp.split("\\s+"));
+            switch (twoWords[0]) {
+                case "delete":
+                case "remove":
+                case "erase":
+                    if (twoWords.length > 1)
+                        deleteEvent(twoWords[1]);
+                    return true;
+                case "change":
+                case "edit":
+                case "rename":
+                    int i = words.indexOf("to");
+                    if (i > 0 && words.size() >= 4) {
+                        String eventName = Utils.getStringFromList(words.subList(1, i));
+                        String newEventName = Utils.getStringFromList(words.subList(i + 1, words.size()));
+                        if (eventName.length() > 0 && newEventName.length() > 0) {
+                            editEvent(eventName, newEventName);
+                        }
                     }
-                }
-                break;
-            default:
-                boolean entered = ConversationVoiceRecognizer.process(resp, fragmentSwitcher, getActivity());
-                if(!entered)
-                    TextToSpeechInstance.speak(getString(R.string.no_understand));
-                break;
+                    return true;
+            }
+            onNoCommandDetected();
+            return false;
         }
-    };
+        return true;
+    }
 }
