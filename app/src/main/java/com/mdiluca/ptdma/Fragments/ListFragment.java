@@ -112,7 +112,6 @@ public class ListFragment extends ListenerFragment {
             ArrayList<String> listItems = sl.get(list);
             listItems.add(item);
             ma.setShoppingLists(sl);
-            adapter.add(item);
         }
 
         setAssistantResponse(getString(R.string.shopping_list_item_added, item, list));
@@ -277,8 +276,13 @@ public class ListFragment extends ListenerFragment {
                         return true;
                     case "enter":
                     case "open":
-                        if (shoppingLists && list.contains(twoWords[1])) {
-                            fragmentSwitcher.switcher(ListFragment.newInstance(twoWords[1]));
+                        if(twoWords.length > 1) {
+                            if (shoppingLists && list.contains(twoWords[1])) {
+                                fragmentSwitcher.switcher(ListFragment.newInstance(twoWords[1]));
+                            } else {
+                                setAssistantResponse(getString(R.string.shopping_list_not_found, twoWords[1]));
+                            }
+                            return true;
                         }
                         break;
                     case "create":
@@ -319,7 +323,6 @@ public class ListFragment extends ListenerFragment {
                         return true;
                 }
             }
-
             onNoCommandDetected();
         }
         return true;

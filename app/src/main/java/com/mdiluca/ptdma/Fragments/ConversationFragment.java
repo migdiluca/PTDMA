@@ -41,17 +41,18 @@ public class ConversationFragment extends ListenerFragment {
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        setAssistantResponse(assistantText);
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View inf = inflater.inflate(R.layout.fragment_conversation, container, false);
         assistantTextView = inf.findViewById(R.id.assistantText);
         return inf;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        setAssistantResponse(assistantText);
     }
 
     @Override

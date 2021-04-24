@@ -83,6 +83,7 @@ public class AddToDoFragment extends ListenerFragment implements DatePickerDialo
             withDate = getArguments().getBoolean(ARG_PARAM1);
             shoppingList = getArguments().getBoolean(ARG_PARAM2);
         }
+        awaitsResponse = true;
     }
 
     @Override

@@ -9,7 +9,7 @@
     <string name="ask_date">When do you want to be reminded?</string>
     <string name="no_understand">Sorry, i didn\'t understand you. Try saying it again!</string>
     <string name="empty_title">The title can\'t be empty. Try saying it again!</string>
-    <string name="add_canceled">Add canceled</string>
+    <string name="add_canceled">Add operation canceled</string>
     <string name="fields_empty">You need to complete both fields first</string>
     <string name="calendar_error">There was an error loading the calendar, try again later</string>
 

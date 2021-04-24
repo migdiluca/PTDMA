@@ -31,12 +31,14 @@ public class TextToSpeechInstance {
     }
 
     public static void setOnUtteranceProgressListener(UtteranceProgressListener utteranceProgressListener) {
-        tts.setOnUtteranceProgressListener(utteranceProgressListener);
+        if(tts != null)
+            tts.setOnUtteranceProgressListener(utteranceProgressListener);
     }
 
     public static void stop() {
         tts.stop();
     }
+
 
     public static void speak(String s) {
         if(tts != null)

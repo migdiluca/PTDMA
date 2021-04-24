@@ -24,7 +24,7 @@ public abstract class ListenerFragment extends Fragment {
     protected SimpleFunction startListening;
     protected SimpleFunction stopListeningUser;
     protected FragmentSwitcher fragmentSwitcher;
-    protected boolean awaitsResponse = false;
+    protected boolean awaitsResponse;
 
     private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
         @Override
@@ -61,7 +61,8 @@ public abstract class ListenerFragment extends Fragment {
         public void onEndOfSpeech() { }
         @Override
         public void onError(int i) {
-            stopListening.apply();
+            if(i == SpeechRecognizer.ERROR_NO_MATCH)
+                onResults(null);
         }
         @Override
         public void onResults(Bundle bundle) {
@@ -84,6 +85,7 @@ public abstract class ListenerFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        awaitsResponse = false;
 
         MainActivity mainActivity = (MainActivity) getActivity();
 
